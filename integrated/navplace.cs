@@ -11,13 +11,10 @@ public class navplace : Agent
     //public HingeJoint arm1Joint;
     //public HingeJoint arm2Joint;
     public Transform targetPosition;
-    //public Transform wall, wall2, wall3, wall4;
-    //public Transform obs1, obs2, obs3, obs4;
-
-    //private float targetArm1Angle = 0f;
-    //private float targetArm2Angle = 0f;
+    public PicknPlace agent1; // Reference to agent1
     public float forceMultiplier = 75;
     private float previousDistanceToTarget;
+    private bool isActive = false;
 
     public override void OnEpisodeBegin()
     {
@@ -50,6 +47,7 @@ public class navplace : Agent
         //targetPosition.localPosition = new Vector3(Random.Range(-5.5f, 5.5f), 0.05f, Random.Range(-5.5f, 5.5f)); 
         targetPosition.localPosition = new Vector3(-5f, 0.5f, 0f);
 
+        //isActive = false;
     }
 
     //private IEnumerator DisableCollisionsTemporarily()
@@ -87,6 +85,8 @@ public class navplace : Agent
 
     public override void CollectObservations(VectorSensor sensor)
     {
+        //if (!isActive) return;
+
         float baseX = mobileBase.transform.position.x;
         float baseY = mobileBase.transform.position.y;
         float baseZ = mobileBase.transform.position.z;
@@ -132,6 +132,11 @@ public class navplace : Agent
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
+        if (!isActive)
+        {
+            Debug.Log("nav still inactive");
+        }// Skip actions if agent2 is not active
+
         var continuousActionsOut = actionsOut.ContinuousActions;
         continuousActionsOut[0] = Input.GetAxis("Arm1");  // Control base movement (x)
         continuousActionsOut[1] = Input.GetAxis("Arm2");    // Control base movement (z)
@@ -141,6 +146,24 @@ public class navplace : Agent
 
     public override void OnActionReceived(ActionBuffers actionBuffers)
     {
+        if (!isActive)
+        {
+            // Check if agent1 has reached its target
+            if (agent1 != null && agent1.GetComponent<PicknPlace>().targetReached)
+            {
+                Debug.Log("Agent2 Activated!");
+                StartCoroutine(ActivateAgentWithDelay());
+            }
+            return;
+
+            // Coroutine to delay activation
+            IEnumerator ActivateAgentWithDelay()
+            {
+                yield return new WaitForSeconds(5); // Wait for 2 seconds
+                isActive = true;
+            }// Skip further processing until activation
+        }
+
         // Actions: [base movement (x), base movement (z), arm1 joint control, arm2 joint control]
         Vector3 controlSignal = Vector3.zero;
         controlSignal.x = actionBuffers.ContinuousActions[0];
