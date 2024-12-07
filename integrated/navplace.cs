@@ -1,20 +1,35 @@
-using System.Collections;
-using UnityEngine;
-using Unity.MLAgents;
-using Unity.MLAgents.Sensors;
 using Unity.MLAgents.Actuators;
-using static UnityEngine.GraphicsBuffer;
+using Unity.MLAgents.Sensors;
+using Unity.MLAgents;
+using UnityEngine;
+using System.Collections;
 
 public class navplace : Agent
 {
     public Rigidbody mobileBase;
-    //public HingeJoint arm1Joint;
-    //public HingeJoint arm2Joint;
     public Transform targetPosition;
-    public PicknPlace agent1; // Reference to agent1
-    public float forceMultiplier = 75;
+    public Rigidbody NavTarget;
+    public Rigidbody obs1;
+    public Rigidbody obs2;
+    public Rigidbody obs3;
+    public Rigidbody obs4;
+    public Rigidbody table;
+    public PicknPlace agent1;
+
     private float previousDistanceToTarget;
     private bool isActive = false;
+    public int maxSteps = 500000;
+
+    // Define the bounding box size around the target
+    private float boundingBoxSizeX = 5.5f;
+    private float boundingBoxSizeZ = 6f;
+
+    //Timekeeping
+    private float episodeStartTime; // Time when the episode started
+    public float timeLimit = 120f;
+
+    
+
 
     public override void OnEpisodeBegin()
     {
@@ -24,111 +39,43 @@ public class navplace : Agent
 
         // Find a safe spawn position
         Vector3 spawnPosition;
-        spawnPosition = new Vector3(10f, 0f, 0f);
+        spawnPosition = new Vector3(2f, 0.05f, 0.05f);
 
         // Set position and reset orientation
-        mobileBase.transform.position = spawnPosition;
+        mobileBase.transform.localPosition = spawnPosition;
         mobileBase.transform.rotation = Quaternion.Euler(0, 0, 0);
 
-        //Previous distance
-        previousDistanceToTarget = Vector3.Distance(mobileBase.transform.position, targetPosition.position);
-
-        // Reset arm angles and disable joint motors temporarily
-        //ResetJointMotor(arm1Joint);
-        //ResetJointMotor(arm2Joint);
-        //targetArm1Angle = 0f;
-        //targetArm2Angle = 0f;
-
-        // Disable collisions temporarily
-        //StartCoroutine(DisableCollisionsTemporarily());
+        // Previous distance
+        previousDistanceToTarget = Vector3.Distance(mobileBase.transform.localPosition, targetPosition.localPosition);
 
         // Randomize target position within a 5x5 area
-        //targetPosition.localPosition = new Vector3(Random.Range(-12f, -5f), 0.05f, Random.Range(-12f, 12f));
-        //targetPosition.localPosition = new Vector3(Random.Range(-5.5f, 5.5f), 0.05f, Random.Range(-5.5f, 5.5f)); 
-        targetPosition.localPosition = new Vector3(-5f, 0.5f, 0f);
+        targetPosition.localPosition = new Vector3(Random.Range(-3f, -1f), 0.1f, Random.Range(-3f,3f));
+        //obs 
+        obs1.transform.localPosition = new Vector3(1f, 0.1f, 2f);
+        obs2.transform.localPosition = new Vector3(1f, 0.1f, -2f);
+        obs3.transform.localPosition = new Vector3(-0.6f, 0.1f, 1f);
+        obs4.transform.localPosition = new Vector3(-0.6f, 0.1f, -1f);
 
-        //isActive = false;
-    }
-
-    //private IEnumerator DisableCollisionsTemporarily()
-    //{
-    //    // Disable collisions
-    //    DisableCollisions();
-
-    //    // Wait for 0.5 seconds (adjust as needed for stabilization)
-    //    yield return new WaitForSeconds(0.1f);
-
-    //    // Re-enable collisions
-    //    EnableCollisions();
-    //}
-
-    //private void DisableCollisions()
-    //{
-    //    // Example: Disable collision detection for the mobile base and other components
-    //    mobileBase.detectCollisions = false;
-    //    arm1Joint.connectedBody.detectCollisions = false;
-    //    arm2Joint.connectedBody.detectCollisions = false;
-    //}
-
-    //private void EnableCollisions()
-    //{
-    //    // Re-enable collision detection
-    //    mobileBase.detectCollisions = true;
-    //    arm1Joint.connectedBody.detectCollisions = true;
-    //    arm2Joint.connectedBody.detectCollisions = true;
-    //}
-
-    private void ResetJointMotor(HingeJoint joint)
-    {
-        joint.useMotor = false; // Disable motor
+        episodeStartTime = Time.time;
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        //if (!isActive) return;
-
-        float baseX = mobileBase.transform.position.x;
-        float baseY = mobileBase.transform.position.y;
-        float baseZ = mobileBase.transform.position.z;
+        float baseX = mobileBase.transform.localPosition.x;
+        //float baseY = mobileBase.transform.localPosition.y;
+        float baseZ = mobileBase.transform.localPosition.z;
         float targetX = targetPosition.localPosition.x;
         float targetY = targetPosition.localPosition.y;
         float targetZ = targetPosition.localPosition.z;
-        float baseVelocityX = mobileBase.linearVelocity.x;
-        float baseVelocityZ = mobileBase.linearVelocity.z;
-        //float arm1Angle = arm1Joint.angle;
-        //float arm2Angle = arm2Joint.angle;
-
-        // Debug each observation
-        //Debug.Log($"Base Pos: {baseX}, {baseY}, {baseZ}, Target Pos: {targetX}, {targetY}, {targetZ}, Vel: {baseVelocityX}, {baseVelocityZ}, Angles: {arm1Angle}, {arm2Angle}");
 
         // Add observations
         sensor.AddObservation(baseX);
-        sensor.AddObservation(baseY);
+        //sensor.AddObservation(baseY);
         sensor.AddObservation(baseZ);
         sensor.AddObservation(targetX);
-        sensor.AddObservation(targetY);
+        //sensor.AddObservation(targetY);
         sensor.AddObservation(targetZ);
-        sensor.AddObservation(baseVelocityX);
-        sensor.AddObservation(baseVelocityZ);
-        //sensor.AddObservation(arm1Angle);
-        //sensor.AddObservation(arm2Angle);
     }
-
-    //public override void OnEpisodeBegin()
-    //{
-    //    if (this.transform.localPosition.y < 0)
-    //    {
-    //        // If the Agent fell, zero its momentum
-    //        this.rBody.angularVelocity = Vector3.zero;
-    //        this.rBody.velocity = Vector3.zero;
-    //        this.transform.localPosition = new Vector3(0, 0.5f, 0);
-    //    }
-
-    //    // Move the target to a new spot
-    //    Target.localPosition = new Vector3(Random.value * 8 - 4,
-    //                                       0.5f,
-    //                                       Random.value * 8 - 4);
-    //}
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
@@ -146,6 +93,7 @@ public class navplace : Agent
 
     public override void OnActionReceived(ActionBuffers actionBuffers)
     {
+
         if (!isActive)
         {
             // Check if agent1 has reached its target
@@ -164,175 +112,119 @@ public class navplace : Agent
             }// Skip further processing until activation
         }
 
-        // Actions: [base movement (x), base movement (z), arm1 joint control, arm2 joint control]
         Vector3 controlSignal = Vector3.zero;
         controlSignal.x = actionBuffers.ContinuousActions[0];
         controlSignal.z = actionBuffers.ContinuousActions[1];
-        mobileBase.AddForce(controlSignal * forceMultiplier);
 
-        // Update joint target angles based on action values
-        //targetArm1Angle += actionBuffers.ContinuousActions[2];
-        //targetArm2Angle += actionBuffers.ContinuousActions[3];
-        //targetArm1Angle = Mathf.Clamp(targetArm1Angle, -90f, 90f);
-        //targetArm2Angle = Mathf.Clamp(targetArm2Angle, -90f, 90f);
+        // Move the agent based on the action
+        float MoveSpeed = 10f;
+        mobileBase.position += controlSignal * Time.deltaTime * MoveSpeed;
 
-        //SetJointMotor(arm1Joint, targetArm1Angle);
-        //SetJointMotor(arm2Joint, targetArm2Angle);
+        // Reward calculations based on distance to target
+        float currentDistanceToTarget = Vector3.Distance(mobileBase.transform.localPosition, targetPosition.localPosition);
 
-        // Reward calculations
-        float distanceToTarget = Vector3.Distance(mobileBase.transform.position, targetPosition.localPosition);
-        float currentDistanceToTarget = Vector3.Distance(mobileBase.transform.position, targetPosition.position);
-        Debug.Log($"Dist to target: {distanceToTarget}");
-
-        if (distanceToTarget < 2.5f)
+        if (TouchesTar()) // Goal reached
         {
-            AddReward(1.0f);
+            SetReward(1.0f); // High reward for reaching the target
             EndEpisode();
         }
 
-        //AddReward(- distanceToTarget * 0.01f);
-        //Reward based on movement towards the target
-        if (currentDistanceToTarget < previousDistanceToTarget)
+        if (TouchesObs()) // Goal reached
         {
-            SetReward(1f / distanceToTarget); // Positive reward for moving closer
-        }
-        else
-        {
-            SetReward(-0.0001f); // Penalty for moving farther away
-        }
-
-        // Update the previous distance for the next step
-        //previousDistanceToTarget = currentDistanceToTarget;
-
-
-
-        // Reward for joint stability
-        //float arm1Error = Mathf.Abs(targetArm1Angle - 0f);  // Deviation from desired angle
-        //float arm2Error = Mathf.Abs(targetArm2Angle - 0f);
-        //AddReward(-arm1Error * 0.0001f);  // Penalize deviations
-        //AddReward(-arm2Error * 0.0001f);
-
-        // Penalize excessive joint velocities
-        //AddReward(-Mathf.Abs(arm1Joint.velocity) * 0.001f);
-        //AddReward(-Mathf.Abs(arm2Joint.velocity) * 0.001f);
-
-        //if (TouchesWall())
-        //{
-        //    AddReward(-1.0f);  // Large penalty for hitting a wall
-        //    EndEpisode();
-        //}
-
-        ////Check if the agent touches any wall
-        //if (TouchesObs())
-        //{
-        //    AddReward(-1.0f);  // Large penalty for hitting obs
-        //    EndEpisode();
-        //}
-
-        if (mobileBase.transform.position.y < 0)
-        {
+            SetReward(-1.0f); // High reward for reaching the target
             EndEpisode();
         }
-
-        //void OnTriggerEnter(Collider other)
+        //else
         //{
-        //    // Check if the agent touches any of the obstacles
-        //    if (other.CompareTag("Obstacle"))
-        //    {
-        //        SetReward(-2.0f);  // Large penalty for hitting an obstacle
-        //        EndEpisode();      // End the episode after collision
-        //    }
+        float rewardForProgress = (previousDistanceToTarget - currentDistanceToTarget);
+        if (rewardForProgress >= 0.1)
+            {
+                
+                SetReward(0.01f); // Reward for progress
+            }
         //}
 
+        //Penalize for going outside the bounding box
+        if (IsOutsideBoundingBox())
+            {
+                AddReward(-1.0f); // Negative reward for leaving the allowed area
+                EndEpisode(); // End episode if agent leaves the bounding box
+            }
 
+        //if (mobileBase.transform.localPosition.y < 0.0f)
+        //{
+        //    //Debug.Log("Eps end due to base fall");
+        //    SetReward(-1.0f);
+        //    EndEpisode();
+
+        //}
+
+        previousDistanceToTarget = currentDistanceToTarget;
+
+        float timeElapsed = Time.time - episodeStartTime;
+
+        // Check if the time limit has been exceeded
+        if (timeElapsed >= timeLimit)
+        {
+            // Apply a penalty and end the episode if time limit exceeded
+            AddReward(-1.0f);  // Negative reward for exceeding time limit
+            EndEpisode();      // End the episode
+        }
     }
 
-    private void SetJointMotor(HingeJoint joint, float targetAngle)
+    
+
+    private bool TouchesTar()
     {
-        var motor = joint.motor;
-        motor.targetVelocity = (targetAngle - joint.angle) * 50f;
-        motor.force = 50f;
-        motor.freeSpin = false;
-        joint.motor = motor;
-        joint.useMotor = true;
+        Collider MobBaseCol = mobileBase.GetComponent<Collider>();
+        Collider NavTarCol = NavTarget.GetComponent<Collider>();
+
+        // Check if the base's collider intersects with the target's collider
+        if (MobBaseCol.bounds.Intersects(NavTarCol.bounds))
+        {
+            return true; // Collision detected
+        }
+
+        return false; // No collision
     }
 
-    //private bool TouchesWall()
-    //{
-    //    // Calculate distances to walls and check for collisions
-    //    float distanceToWall1 = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.x) - Mathf.Abs(wall.position.x));
-    //    float distanceToWall2 = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.x) - Mathf.Abs(wall2.position.x));
-    //    float distanceToWall3 = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.z) - Mathf.Abs(wall3.position.z));
-    //    float distanceToWall4 = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.z) - Mathf.Abs(wall4.position.z));
+    private bool TouchesObs()
+    {
+        Collider mobBaseCol = mobileBase.GetComponent<Collider>();
+        GameObject[] obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
+        Collider TableCol = table.GetComponent<Collider>();
 
-    //    // Check if the agent is very close to any wall
-    //    float threshold = 0.5f; // Define a small threshold for wall proximity
-    //    if (distanceToWall1 < threshold || distanceToWall2 < threshold || distanceToWall3 < threshold || distanceToWall4 < threshold)
-    //    {
-    //        return true;
-    //    }
+        foreach (GameObject obs in obstacles)
+        {
+            Collider obsCol = obs.GetComponent<Collider>();
+            if (mobBaseCol.bounds.Intersects(obsCol.bounds))
+            {
+                return true; // Collision detected with at least one obstacle
+            }
+        }
 
-    //    return false;
-    //}
-
-    //private bool TouchesObs()
-    //{
-    //    // Calculate distances to walls and check for collisions
-    //    float distanceToobs1x = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.x) - Mathf.Abs(obs1.position.x));
-    //    float distanceToobs2x = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.x) - Mathf.Abs(obs2.position.x));
-    //    float distanceToobs3x = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.x) - Mathf.Abs(obs3.position.x));
-    //    float distanceToobs4x = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.x) - Mathf.Abs(obs4.position.x));
-
-    //    float distanceToobs1z = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.z) - Mathf.Abs(obs1.position.z));
-    //    float distanceToobs2z = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.z) - Mathf.Abs(obs2.position.z));
-    //    float distanceToobs3z = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.z) - Mathf.Abs(obs3.position.z));
-    //    float distanceToobs4z = Mathf.Abs(Mathf.Abs(mobileBase.transform.position.z) - Mathf.Abs(obs4.position.z));
-
-    //    // Check if the agent is very close to any wall
-    //    float threshold1 = 2.75f;
-    //    float threshold2 = 0.75f; // Define a small threshold for wall proximity
-    //    if (distanceToobs1x < threshold1 && distanceToobs1z < threshold2 || distanceToobs2x < threshold1 && distanceToobs2z < threshold2 || distanceToobs3z < threshold1 && distanceToobs3x < threshold2 || distanceToobs4z < threshold1 && distanceToobs4x < threshold2)
-    //    {
-    //        return true;
-    //    }
-    //    //else if (distanceToobs1z < threshold2 || distanceToobs2z < threshold2 || distanceToobs3x < threshold2 || distanceToobs4x < threshold2)
-    //    //{
-    //    //return true;
-    //    //}
-
-    //    return false;
-    //}
-
-    //private bool TouchesObs()
-    //{
-    //    // Get the bounds of the base's collider
-    //    Collider MobBaseCol = mobileBase.GetComponent<Collider>();
-    //    //if (baseCollider == null)
-    //    //{
-    //    //    Debug.LogError("Base does not have a Collider attached!");
-    //    //    return false;
-    //    //}
-
-    //    // Array of all obstacles
-    //    Collider NavTarCol = tar.GetComponent<Collider>(), 
-    //    foreach (var obstacle in obstacles)
-    //    {
-    //        //if (obstacle == null)
-    //        //{
-    //        //    Debug.LogError("One or more obstacles are missing colliders!");
-    //        //    continue;
-    //        //}
-
-    //        // Check if the base's collider intersects with the obstacle's collider
-    //        if (baseCollider.bounds.Intersects(obstacle.bounds))
-    //        {
-    //            return true; // Collision detected
-    //        }
-    //    }
-
-    //    return false; // No collisions
-    //}
+        if (mobBaseCol.bounds.Intersects(TableCol.bounds))
+        {
+            return true; // Collision detected with at least one obstacle
+        }
 
 
+        return false; // No collisions detected
+    }
 
+
+    private bool IsOutsideBoundingBox()
+    {
+        // Get the position of the agent relative to the target
+        Vector3 agentPosition = mobileBase.transform.localPosition;
+
+        // Check if the agent is outside the allowed bounding box
+        if (Mathf.Abs(agentPosition.x - targetPosition.localPosition.x) > boundingBoxSizeX ||
+            Mathf.Abs(agentPosition.z - targetPosition.localPosition.z) > boundingBoxSizeZ)
+        {
+            return true; // The agent is outside the bounding box
+        }
+
+        return false; // The agent is within the bounding box
+    }
 }
