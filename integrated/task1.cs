@@ -64,6 +64,7 @@ public class task1 : Agent
             // Reset arm1
             arm1.transform.position = initialArm1Position;
             arm1.transform.rotation = initialArm1Rotation;
+            dummy.SetActive(false);
 
             //Rigidbody arm1Rb = arm1.GetComponent<Rigidbody>();
             if (arm1 != null)
@@ -135,7 +136,7 @@ public class task1 : Agent
 
             episodeStartTime = Time.time;
         }
-        
+
 
         if (task1done)
         {
@@ -157,6 +158,7 @@ public class task1 : Agent
             mobileBase.transform.localPosition = new Vector3(2.0f, 0.05f, 0f);
             NavTarget.gameObject.SetActive(false);
             this.enabled = false; // Prevents further execution
+            dummy.SetActive(false);
             //NavTarget.SetActive(false);
             Debug.Log("First Nav disabled.");
         }
