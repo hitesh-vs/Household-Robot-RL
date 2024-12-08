@@ -458,6 +458,8 @@ public class PicknPlace : Agent
     private Vector3 initialTargetPosition;
     private Quaternion initialTargetRotation;
 
+    private Vector3 finalArm2Position;
+
     public Rigidbody arm1;
     public Rigidbody arm2;
 
@@ -515,6 +517,7 @@ public class PicknPlace : Agent
         // Store initial states of arm2
         initialArm2Position = new Vector3(2f, 0.7f, 0.2f);
         initialArm2Rotation = Quaternion.Euler(90f, 0f, 0f);
+        finalArm2Position = new Vector3(2f, 3.5f, 0.2f);
 
         // Store initial states of end effector
         initialEndEffectorPosition = endEffector.transform.position;
@@ -531,8 +534,8 @@ public class PicknPlace : Agent
         //    this.enabled = false;
         //    Debug.Log("Second Agent is not enabled");
         //}
-        
-        if(agent0.GetComponent<task1>().task1done)
+
+        if (agent0.GetComponent<task1>().task1done)
         {
             this.enabled = true;
             Debug.Log("Second Agent Activated");
@@ -566,7 +569,7 @@ public class PicknPlace : Agent
             // Coroutine to delay activation
             IEnumerator ActivateAgentWithDelay()
             {
-                yield return new WaitForSeconds(5); // Wait for 2 seconds
+                yield return new WaitForSeconds(0f); // Wait for 2 seconds
                 ispickActive = true;
             }// Skip further processing until activation
         }
@@ -743,7 +746,7 @@ public class PicknPlace : Agent
             }
 
             // Reset arm2
-            arm2.transform.position = initialArm2Position;
+            arm2.transform.position = finalArm2Position;
             arm2.transform.rotation = initialArm2Rotation;
 
             //Rigidbody arm2Rb = arm2.GetComponent<Rigidbody>();
@@ -800,7 +803,7 @@ public class PicknPlace : Agent
         arm1.angularVelocity = Vector3.zero;
 
         // Reset arm2
-        arm2.transform.position = initialArm2Position;
+        arm2.transform.position = finalArm2Position;
         arm2.transform.rotation = initialArm2Rotation;
         arm2.linearVelocity = Vector3.zero;
         arm2.angularVelocity = Vector3.zero;
@@ -897,4 +900,3 @@ public class PicknPlace : Agent
 
 
 }
-
