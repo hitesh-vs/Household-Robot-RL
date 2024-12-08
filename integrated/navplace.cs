@@ -3,6 +3,7 @@ using Unity.MLAgents.Sensors;
 using Unity.MLAgents;
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class navplace : Agent
 {
@@ -28,7 +29,7 @@ public class navplace : Agent
     private float episodeStartTime; // Time when the episode started
     public float timeLimit = 120f;
 
-    
+
 
 
     public override void OnEpisodeBegin()
@@ -49,14 +50,57 @@ public class navplace : Agent
         previousDistanceToTarget = Vector3.Distance(mobileBase.transform.localPosition, targetPosition.localPosition);
 
         // Randomize target position within a 5x5 area
-        targetPosition.localPosition = new Vector3(Random.Range(-3f, -1f), 0.1f, Random.Range(-3f,3f));
+        targetPosition.localPosition = new Vector3(Random.Range(-3f, -1f), 0.1f, Random.Range(-3f, 3f));
         //obs 
-        obs1.transform.localPosition = new Vector3(1f, 0.1f, 2f);
-        obs2.transform.localPosition = new Vector3(1f, 0.1f, -2f);
-        obs3.transform.localPosition = new Vector3(-0.6f, 0.1f, 1f);
-        obs4.transform.localPosition = new Vector3(-0.6f, 0.1f, -1f);
+        //obs1.transform.localPosition = new Vector3(1f, 0.1f, 2f);
+        //obs2.transform.localPosition = new Vector3(1f, 0.1f, -2f);
+        //obs3.transform.localPosition = new Vector3(-0.6f, 0.1f, 1f);
+        //obs4.transform.localPosition = new Vector3(-0.6f, 0.1f, -1f);
+
+        // Randomize obstacle positions
+        List<Vector3> occupiedPositions = new List<Vector3> { targetPosition.localPosition };
+        RandomizeObstaclePosition(obs1, occupiedPositions);
+        RandomizeObstaclePosition(obs2, occupiedPositions);
+        RandomizeObstaclePosition(obs3, occupiedPositions);
+        RandomizeObstaclePosition(obs4, occupiedPositions);
+
+        // Track the previous distance
+        previousDistanceToTarget = Vector3.Distance(mobileBase.transform.localPosition, targetPosition.localPosition);
 
         episodeStartTime = Time.time;
+
+    }
+
+    private void RandomizeObstaclePosition(Rigidbody obstacle, List<Vector3> occupiedPositions)
+    {
+        Vector3 newPosition;
+        bool isValid;
+
+        do
+        {
+            // Generate a random position within the range
+            newPosition = new Vector3(
+                Random.Range(-4f, 1f),
+                0.1f,
+                Random.Range(-4f, 4f)
+            );
+
+            // Check if the position overlaps with any existing positions
+            isValid = true;
+            foreach (Vector3 occupied in occupiedPositions)
+            {
+                if (Vector3.Distance(newPosition, occupied) < 0.5f) // Adjust the threshold as needed
+                {
+                    isValid = false;
+                    break;
+                }
+            }
+        }
+        while (!isValid);
+
+        // Assign the valid position and add it to the list of occupied positions
+        obstacle.transform.localPosition = newPosition;
+        occupiedPositions.Add(newPosition);
     }
 
     public override void CollectObservations(VectorSensor sensor)
@@ -79,10 +123,10 @@ public class navplace : Agent
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
-        if (!isActive)
-        {
-            Debug.Log("nav still inactive");
-        }// Skip actions if agent2 is not active
+        //if (!isActive)
+        //{
+        //    Debug.Log("nav still inactive");
+        //}// Skip actions if agent2 is not active
 
         var continuousActionsOut = actionsOut.ContinuousActions;
         continuousActionsOut[0] = Input.GetAxis("Arm1");  // Control base movement (x)
@@ -94,23 +138,23 @@ public class navplace : Agent
     public override void OnActionReceived(ActionBuffers actionBuffers)
     {
 
-        if (!isActive)
-        {
-            // Check if agent1 has reached its target
-            if (agent1 != null && agent1.GetComponent<PicknPlace>().targetReached)
-            {
-                Debug.Log("Agent2 Activated!");
-                StartCoroutine(ActivateAgentWithDelay());
-            }
-            return;
+        //if (!isActive)
+        //{
+        //    // Check if agent1 has reached its target
+        //    if (agent1 != null && agent1.GetComponent<PicknPlace>().targetReached)
+        //    {
+        //        Debug.Log("Agent2 Activated!");
+        //        StartCoroutine(ActivateAgentWithDelay());
+        //    }
+        //    return;
 
-            // Coroutine to delay activation
-            IEnumerator ActivateAgentWithDelay()
-            {
-                yield return new WaitForSeconds(5); // Wait for 2 seconds
-                isActive = true;
-            }// Skip further processing until activation
-        }
+        //    // Coroutine to delay activation
+        //    IEnumerator ActivateAgentWithDelay()
+        //    {
+        //        yield return new WaitForSeconds(5); // Wait for 2 seconds
+        //        isActive = true;
+        //    }// Skip further processing until activation
+        //}
 
         Vector3 controlSignal = Vector3.zero;
         controlSignal.x = actionBuffers.ContinuousActions[0];
@@ -127,29 +171,32 @@ public class navplace : Agent
         {
             SetReward(1.0f); // High reward for reaching the target
             EndEpisode();
+            Debug.Log($"dusra");
         }
 
         if (TouchesObs()) // Goal reached
         {
             SetReward(-1.0f); // High reward for reaching the target
             EndEpisode();
+            Debug.Log($"hitesh is great");
         }
         //else
         //{
         float rewardForProgress = (previousDistanceToTarget - currentDistanceToTarget);
         if (rewardForProgress >= 0.1)
-            {
-                
-                SetReward(0.01f); // Reward for progress
-            }
+        {
+
+            SetReward(0.01f); // Reward for progress
+        }
         //}
 
         //Penalize for going outside the bounding box
         if (IsOutsideBoundingBox())
-            {
-                AddReward(-1.0f); // Negative reward for leaving the allowed area
-                EndEpisode(); // End episode if agent leaves the bounding box
-            }
+        {
+            AddReward(-1.0f); // Negative reward for leaving the allowed area
+            EndEpisode(); // End episode if agent leaves the bounding box
+            Debug.Log($"pehela nasha ");
+        }
 
         //if (mobileBase.transform.localPosition.y < 0.0f)
         //{
@@ -169,10 +216,11 @@ public class navplace : Agent
             // Apply a penalty and end the episode if time limit exceeded
             AddReward(-1.0f);  // Negative reward for exceeding time limit
             EndEpisode();      // End the episode
+            Debug.Log($"habibi");
         }
     }
 
-    
+
 
     private bool TouchesTar()
     {
