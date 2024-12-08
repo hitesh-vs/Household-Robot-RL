@@ -3,9 +3,11 @@ using Unity.MLAgents.Sensors;
 using Unity.MLAgents;
 using UnityEngine;
 using System.Collections;
+using static UnityEngine.GraphicsBuffer;
+using Unity.Burst.Intrinsics;
 using System.Collections.Generic;
 
-public class navplace : Agent
+public class task1 : Agent
 {
     public Rigidbody mobileBase;
     public Transform targetPosition;
@@ -15,10 +17,32 @@ public class navplace : Agent
     public Rigidbody obs3;
     public Rigidbody obs4;
     public Rigidbody table;
-    public PicknPlace agent1;
+    //public PicknPlace agent1;
+
+    public Rigidbody arm1;
+    public Rigidbody arm2;
+    public Rigidbody endEffector;
+    public Rigidbody dummy;
+
+    private Vector3 initialArm1Position = new Vector3(3.5f, 2f, -3.5f);
+    private Quaternion initialArm1Rotation = Quaternion.Euler(0f, 0f, 0f);
+
+    private Vector3 initialArm2Position = new Vector3(3.5f, 3.5f, -3.3f);
+    private Quaternion initialArm2Rotation = Quaternion.Euler(90f, 0f, 0f);
+
+    private Vector3 initialEndEffectorPosition = new Vector3(3.5f, 3.5f, -3.05f);
+    private Quaternion initialEndEffectorRotation = new Quaternion(0, 0, 0, 1);
+
+    private Vector3 finalArm1Position = new Vector3(2f, 0.4f, 0f);
+    private Vector3 finalArm2Position = new Vector3(2f, 0.7f, 0.2f);
+    private Vector3 finalEndEffectorPosition = new Vector3(2f, 0.7f, 0.45f);
+
+    //private Vector3 initialTargetPosition;
+    //private Quaternion initialTargetRotation;
+
 
     private float previousDistanceToTarget;
-    private bool isActive = false;
+    public bool task1done;
     public int maxSteps = 500000;
 
     // Define the bounding box size around the target
@@ -29,46 +53,133 @@ public class navplace : Agent
     private float episodeStartTime; // Time when the episode started
     public float timeLimit = 120f;
 
+    void Update()
+    {
+        if (dummy != null && dummy.gameObject.activeSelf)
+        {
+            dummy.gameObject.SetActive(false);
+            Debug.Log($"Forced deactivation of dummy {dummy.name}.");
+        }
+    }
 
 
 
     public override void OnEpisodeBegin()
     {
-        // Reset Rigidbody velocities
-        mobileBase.linearVelocity = Vector3.zero;
-        mobileBase.angularVelocity = Vector3.zero;
+        if (!task1done)
+        {
 
-        // Find a safe spawn position
-        Vector3 spawnPosition;
-        spawnPosition = new Vector3(2f, 0.05f, 0.05f);
+            // Reset arm1
+            arm1.transform.position = initialArm1Position;
+            arm1.transform.rotation = initialArm1Rotation;
 
-        // Set position and reset orientation
-        mobileBase.transform.localPosition = spawnPosition;
-        mobileBase.transform.rotation = Quaternion.Euler(0, 0, 0);
+            //Rigidbody arm1Rb = arm1.GetComponent<Rigidbody>();
+            if (arm1 != null)
+            {
+                arm1.linearVelocity = Vector3.zero;
+                arm1.angularVelocity = Vector3.zero;
+                arm1.useGravity = false; // Disable gravity
+                arm1.constraints = RigidbodyConstraints.FreezePositionY; // Freeze necessary axes
+            }
 
-        // Previous distance
-        previousDistanceToTarget = Vector3.Distance(mobileBase.transform.localPosition, targetPosition.localPosition);
+            // Reset arm2
+            arm2.transform.position = initialArm2Position;
+            arm2.transform.rotation = initialArm2Rotation;
 
-        // Randomize target position within a 5x5 area
-        targetPosition.localPosition = new Vector3(Random.Range(-3f, -1f), 0.1f, Random.Range(-3f, 3f));
-        //obs 
-        //obs1.transform.localPosition = new Vector3(1f, 0.1f, 2f);
-        //obs2.transform.localPosition = new Vector3(1f, 0.1f, -2f);
-        //obs3.transform.localPosition = new Vector3(-0.6f, 0.1f, 1f);
-        //obs4.transform.localPosition = new Vector3(-0.6f, 0.1f, -1f);
+            //Rigidbody arm2Rb = arm2.GetComponent<Rigidbody>();
+            if (arm2 != null)
+            {
+                arm2.linearVelocity = Vector3.zero;
+                arm2.angularVelocity = Vector3.zero;
+                arm2.useGravity = false; // Disable gravity
+                arm2.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotation; // Freeze necessary axes
+            }
 
-        // Randomize obstacle positions
-        List<Vector3> occupiedPositions = new List<Vector3> { targetPosition.localPosition };
-        RandomizeObstaclePosition(obs1, occupiedPositions);
-        RandomizeObstaclePosition(obs2, occupiedPositions);
-        RandomizeObstaclePosition(obs3, occupiedPositions);
-        RandomizeObstaclePosition(obs4, occupiedPositions);
+            // Reset end-effector
+            endEffector.transform.position = initialEndEffectorPosition;
+            endEffector.transform.rotation = initialEndEffectorRotation;
 
-        // Track the previous distance
-        previousDistanceToTarget = Vector3.Distance(mobileBase.transform.localPosition, targetPosition.localPosition);
+            //Rigidbody eeRb = endEffector.GetComponent<Rigidbody>();
+            if (endEffector != null)
+            {
+                endEffector.linearVelocity = Vector3.zero;
+                endEffector.angularVelocity = Vector3.zero;
+                endEffector.useGravity = false; // Disable gravity
+                endEffector.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotation; // Freeze necessary axes
 
-        episodeStartTime = Time.time;
+            }
 
+            //if (dummy != null)
+            //{
+            //    dummy.linearVelocity = Vector3.zero;
+            //    dummy.angularVelocity = Vector3.zero;
+            //    dummy.useGravity = false; // Disable gravity
+            //    dummy.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotation;
+
+            //}
+
+            // Reset Rigidbody velocities
+            mobileBase.linearVelocity = Vector3.zero;
+            mobileBase.angularVelocity = Vector3.zero;
+
+            // Find a safe spawn position
+            Vector3 spawnPosition;
+            spawnPosition = new Vector3(3.5f, 0.05f, -3.5f);
+
+            // Set position and reset orientation
+            mobileBase.transform.localPosition = spawnPosition;
+            mobileBase.transform.rotation = Quaternion.Euler(0, 0, 0);
+
+            // Previous distance
+            previousDistanceToTarget = Vector3.Distance(mobileBase.transform.localPosition, targetPosition.localPosition);
+
+            // Randomize target position within a 5x5 area
+            targetPosition.localPosition = new Vector3(2f, 0.05f, 0.05f);
+            ////obs 
+            //obs1.transform.localPosition = new Vector3(1f, 0.1f, 2f);
+            //obs2.transform.localPosition = new Vector3(1f, 0.1f, -2f);
+            //obs3.transform.localPosition = new Vector3(-0.6f, 0.1f, 1f);
+            //obs4.transform.localPosition = new Vector3(-0.6f, 0.1f, -1f);
+
+            List<Vector3> occupiedPositions = new List<Vector3> { targetPosition.localPosition };
+            RandomizeObstaclePosition(obs1, occupiedPositions);
+            RandomizeObstaclePosition(obs2, occupiedPositions);
+            RandomizeObstaclePosition(obs3, occupiedPositions);
+            RandomizeObstaclePosition(obs4, occupiedPositions);
+
+            // Track the previous distance
+            previousDistanceToTarget = Vector3.Distance(mobileBase.transform.localPosition, targetPosition.localPosition);
+
+
+            episodeStartTime = Time.time;
+        }
+
+
+        if (task1done)
+        {
+            if (arm1 != null)
+            {
+                arm1.constraints = RigidbodyConstraints.None; // Remove all constraints
+            }
+
+            if (arm2 != null)
+            {
+                arm2.constraints = RigidbodyConstraints.None; // Remove all constraints
+            }
+
+            if (endEffector != null)
+            {
+                endEffector.constraints = RigidbodyConstraints.None; // Remove all constraints
+            }
+
+            mobileBase.transform.localPosition = new Vector3(2.0f, 0.05f, 0f);
+            NavTarget.gameObject.SetActive(false);
+            this.enabled = false; // Prevents further execution
+
+
+            //NavTarget.SetActive(false);
+            Debug.Log("First Nav disabled.");
+        }
     }
 
     private void RandomizeObstaclePosition(Rigidbody obstacle, List<Vector3> occupiedPositions)
@@ -167,18 +278,22 @@ public class navplace : Agent
         // Reward calculations based on distance to target
         float currentDistanceToTarget = Vector3.Distance(mobileBase.transform.localPosition, targetPosition.localPosition);
 
+        arm1.transform.rotation = initialArm1Rotation; // Lock arm1 to its initial rotation
+        arm2.transform.rotation = initialArm2Rotation; // Lock arm2 to its initial rotation
+
         if (TouchesTar()) // Goal reached
         {
+            task1done = true;
             SetReward(1.0f); // High reward for reaching the target
+            Debug.Log("Task1 target reached");
             EndEpisode();
-            Debug.Log($"dusra");
         }
 
         if (TouchesObs()) // Goal reached
         {
             SetReward(-1.0f); // High reward for reaching the target
+            Debug.Log("Touched obs");
             EndEpisode();
-            Debug.Log($"hitesh is great");
         }
         //else
         //{
@@ -194,8 +309,8 @@ public class navplace : Agent
         if (IsOutsideBoundingBox())
         {
             AddReward(-1.0f); // Negative reward for leaving the allowed area
+            Debug.Log("Outside Bb");
             EndEpisode(); // End episode if agent leaves the bounding box
-            Debug.Log($"pehela nasha ");
         }
 
         //if (mobileBase.transform.localPosition.y < 0.0f)
@@ -216,7 +331,6 @@ public class navplace : Agent
             // Apply a penalty and end the episode if time limit exceeded
             AddReward(-1.0f);  // Negative reward for exceeding time limit
             EndEpisode();      // End the episode
-            Debug.Log($"habibi");
         }
     }
 
@@ -273,6 +387,6 @@ public class navplace : Agent
             return true; // The agent is outside the bounding box
         }
 
-        return false; // The agent is within the bounding box
-    }
+        return false; // The agent is within the bounding box
+    }
 }
