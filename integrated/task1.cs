@@ -21,7 +21,7 @@ public class task1 : Agent
     public Rigidbody arm1;
     public Rigidbody arm2;
     public Rigidbody endEffector;
-    public GameObject dummy;
+    public Rigidbody dummy;
 
     private Vector3 initialArm1Position = new Vector3(3.5f, 2f, -3.5f);
     private Quaternion initialArm1Rotation = Quaternion.Euler(0f, 0f, 0f);
@@ -52,19 +52,25 @@ public class task1 : Agent
     private float episodeStartTime; // Time when the episode started
     public float timeLimit = 120f;
 
-    void Start()
+    void Update()
     {
-        dummy.SetActive(false);
+        if (dummy != null && dummy.gameObject.activeSelf)
+        {
+            dummy.gameObject.SetActive(false);
+            Debug.Log($"Forced deactivation of dummy {dummy.name}.");
+        }
     }
+
+
 
     public override void OnEpisodeBegin()
     {
         if (!task1done)
         {
+
             // Reset arm1
             arm1.transform.position = initialArm1Position;
             arm1.transform.rotation = initialArm1Rotation;
-            dummy.SetActive(false);
 
             //Rigidbody arm1Rb = arm1.GetComponent<Rigidbody>();
             if (arm1 != null)
@@ -158,7 +164,8 @@ public class task1 : Agent
             mobileBase.transform.localPosition = new Vector3(2.0f, 0.05f, 0f);
             NavTarget.gameObject.SetActive(false);
             this.enabled = false; // Prevents further execution
-            dummy.SetActive(false);
+
+
             //NavTarget.SetActive(false);
             Debug.Log("First Nav disabled.");
         }
