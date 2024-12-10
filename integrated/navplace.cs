@@ -52,6 +52,13 @@ public class navplace : Agent
         RandomizeObstaclePositionAroundInitial(obs3, new Vector3(-0.6f, 0.1f, 1f), occupiedPositions);
         RandomizeObstaclePositionAroundInitial(obs4, new Vector3(-0.6f, 0.1f, -1f), occupiedPositions);
 
+        //obs 
+        //obs1.transform.localPosition = new Vector3(1f, 0.1f, 2f);
+        //obs2.transform.localPosition = new Vector3(1f, 0.1f, -2f);
+        //obs3.transform.localPosition = new Vector3(-0.6f, 0.1f, 1f);
+        //obs4.transform.localPosition = new Vector3(-0.6f, 0.1f, -1f);
+
+
         previousDistanceToTarget = Vector3.Distance(mobileBase.transform.localPosition, targetPosition.localPosition);
         episodeStartTime = Time.time;
     }
