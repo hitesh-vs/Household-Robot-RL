@@ -1,4 +1,4 @@
-## High to Low Level Task Planning and Execution using RL ##
+# High to Low Level Task Planning and Execution using RL 
 
 This project presents a framework for mobile manipulators using Hierarchical Reinforcement Learning (HRL) and Reward Shaping to tackle complex tasks efficiently. Intrinsic Curiosity fosters self-driven exploration, while Unity ML Agents enable a proof-of-concept for navigation and object manipulation in unknown environments. Future work aims to integrate large language models (LLMs) for task decomposition and enhanced automation.
 
